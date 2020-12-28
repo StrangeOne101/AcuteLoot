@@ -1,5 +1,6 @@
 package acute.loot;
 
+import acute.loot.enchanting.EnchantUtils;
 import acute.loot.namegen.*;
 import org.bstats.bukkit.Metrics;
 
@@ -289,6 +290,8 @@ public final class AcuteLoot extends JavaPlugin {
             //FIXME: Append namespace for duplicate effect names across different namespaces
             effectNames.put(effect.getName(), effect.effectId().toString());
         }
+
+        EnchantUtils.setup(this);
 
         // Dev Effects (currently being tested)
         if(debug) {

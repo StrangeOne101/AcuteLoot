@@ -68,6 +68,41 @@ loot-sources:
     chance: 65 #Percentage
     show-cooldown-msg: true
 
+# Loot enchants are the enchants given to loot found.
+# Level is the level used like you use in enchanting tables. Can exceed 30 but be warned that some enchantments don't have a high enough max level to be able to be appliciple to higher level enchants, so they must be overclocked
+# Chance is the chance the item is enchanted.
+# Enchantability is extra enchantability the item is granted. 0 is unchanged, 10 would mean it gets much more enchants per level.
+
+# The max level enchantments are the bottom are used to create overclocked enchantments. These enchantments can be gotten from loot enchanted with more than 30 levels. If the default minecraft values are used, less enchantments will appear around level 40 and above
+
+loot-enchants:
+  rarities:
+    100: #Rarity ID, see the rarities section bellow
+      level: 5
+      chance: 10
+      enchantability: 1
+    200: #Rarity ID
+      level: 10
+      chance: 20
+      enchantability: 3
+    300: #Rarity ID
+      level: 20
+      chance: 80
+      enchantability: 5
+    400: #Rarity ID
+      level: 30
+      chance: 100
+      enchantability: 15
+  enchantments: # Enchantments not written here can be added. Ones not added will be treated as default
+    max-level:
+      sharpness: 6
+      knockback: 3
+      smite: 6
+      bane-of-athropods: 6
+      power: 6
+      unbreaking: 4
+      efficiency: 6
+
 loot-category-lore:
   enabled: true
   axe:

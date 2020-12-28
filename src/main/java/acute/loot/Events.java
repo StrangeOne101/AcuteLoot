@@ -1,5 +1,6 @@
 package acute.loot;
 
+import acute.loot.enchanting.EnchantUtils;
 import acute.loot.namegen.NameGenerator;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -468,6 +469,24 @@ public class Events implements Listener {
         if (attempts == 0) {
             plugin.getLogger().severe("Could not generate a name in 100 attempts! Are name files empty or corrupted?");
             plugin.getLogger().severe("Name Generator: " + nameGenerator.toString());
+        }
+
+        int enchLevel = plugin.getConfig().getInt("loot-enchants.rarities." + loot.rarity().getId() + ".level", 0);
+        double enchChance = plugin.getConfig().getDouble("loot-enchants.rarities." + loot.rarity().getId() + ".chance", 0) / 100;
+
+        if (lootMaterial == LootMaterial.GENERIC) {
+            enchLevel /= 4;
+            enchLevel -= 1; //Just so no level 1 enchants are applied
+        }
+        if (enchLevel > 0 && enchChance > 0) {
+            if (enchChance >= 100 || Math.random() <= enchChance) {
+                int bonusEnchantability = plugin.getConfig().getInt("loot-enchants.rarities." + loot.rarity().getId() + ".enchantability", 0);
+                ItemStack enchantedStack = EnchantUtils.enchant(item, enchLevel, bonusEnchantability, true, false, lootMaterial == LootMaterial.GENERIC);
+                item.addUnsafeEnchantments(enchantedStack.getEnchantments());
+                if (enchantedStack.getType() == Material.ENCHANTED_BOOK) {
+                    item.setType(Material.ENCHANTED_BOOK);
+                }
+            }
         }
 
         // Add loot info to lore and display name
