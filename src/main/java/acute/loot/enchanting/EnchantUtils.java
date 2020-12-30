@@ -205,33 +205,34 @@ public class EnchantUtils {
         float randomness = (random.nextFloat() + random.nextFloat() - 1.0F) * 0.15F;
         levels = Math.max(Math.min(Math.round(levels + levels * randomness), 2147483647), 1);
 
-        Map<Enchantment, Integer> allEnchs = getAllEnchants(stack, levels, treasure, curses, ignoreItemType);
+        int maxedLevels = Math.max(levels, 100); //Make level unable to go past 100. Things past here are too chaotic.
+        Map<Enchantment, Integer> allEnchs = getAllEnchants(stack, maxedLevels, treasure, curses, ignoreItemType);
 
         //The stuff bellow uses weighted random to pick enchants from the applicable enchants
         if (!allEnchs.isEmpty()) {
 
             int totalWeight = 0;
             for (Enchantment ench : allEnchs.keySet()) {
-                totalWeight += allEnchs.get(ench) + (ench.isTreasure() && !ench.isCursed() ? 1 : 0);
+                totalWeight += WEIGHTS.get(ench);
             }
             List<Enchantment> enchs = new ArrayList<>(allEnchs.keySet());
 
             Enchantment ench = pickWeighted(enchs, allEnchs, random.nextInt(totalWeight));
             addEnchant(newStack, ench, allEnchs.get(ench));
             enchs.remove(ench);
-            totalWeight -= allEnchs.get(ench) + (ench.isTreasure() && !ench.isCursed() ? 1 : 0);
+            totalWeight -= WEIGHTS.get(ench);
 
             while (random.nextInt(50 - offset) <= levels && !enchs.isEmpty()) {
                 ench = pickWeighted(enchs, allEnchs, random.nextInt(totalWeight));
 
                 if ((ench == Enchantment.LOOT_BONUS_BLOCKS && newStack.getEnchantments().containsKey(Enchantment.SILK_TOUCH)) ||
                         (ench == Enchantment.SILK_TOUCH && newStack.getEnchantments().containsKey(Enchantment.LOOT_BONUS_BLOCKS))) {
-                    totalWeight -= allEnchs.get(ench) + (ench.isTreasure() && !ench.isCursed() ? 1 : 0);
+                    totalWeight -= WEIGHTS.get(ench);
                     enchs.remove(ench);
                     continue; //Little hotfix to prevent items getting fortune AND silk touch
                 }
 
-                totalWeight -= allEnchs.get(ench) + (ench.isTreasure() && !ench.isCursed() ? 1 : 0);
+                totalWeight -= WEIGHTS.get(ench);
                 addEnchant(newStack, ench, allEnchs.get(ench));
                 enchs.remove(ench);
 
@@ -280,12 +281,9 @@ public class EnchantUtils {
             //We could manually make a list of what they should be, but it'd be too hard and wouldn't support 3rd part enchants. This method
             //isn't meant to be called lots, so a tiny performance hit reflection from using reflection should be fine
 
-
-
             Object nmsEnchant = NMS_OBJECTS.get(enchant);
             boolean overclockFlag = MAX_LEVELS.containsKey(enchant) && MAX_LEVELS.get(enchant) > enchant.getMaxLevel();
             int maxLevel = overclockFlag ? MAX_LEVELS.get(enchant) : enchant.getMaxLevel();
-
 
             try {
                 for (int lvl = maxLevel; lvl > enchant.getStartLevel() - 1; lvl--) {
@@ -295,13 +293,24 @@ public class EnchantUtils {
                     if (levels >= minLvlForStrength && levels <= maxLvlForStrength) {
                         enchs.put(enchant, lvl);
                         break;
-                    } else if (!overclockFlag && lvl == maxLevel && overclockHack) { //If the max level isnt custom set but we should still try the hack
+                    } else if (lvl == maxLevel && overclockHack) { //If the max level isnt custom set but we should still try the hack
                         int minLvlForStrength2 = (int) getMinLevelForLevelStrength.invoke(nmsEnchant, lvl + 1);
                         int maxLvlForStrength2 = (int) getMaxLevelForLevelStrength.invoke(nmsEnchant, lvl + 1);
-                        if (maxLvlForStrength2 >= 45 && levels >= minLvlForStrength) { //If the enchantment would be out of range for high level enchantments, only check min level
-                            enchs.put(enchant, lvl);
-                            break;
-                        } 
+                        if (overclockFlag) { //Handle enchantments that have been overclocked
+                            if (levels >= minLvlForStrength2 && levels >= maxLvlForStrength) { //If the level is above the max range for the highest level, go with highest lvl
+                                enchs.put(enchant, lvl);
+                                break;
+                            }
+                        } else { //Vanilla enchants that aren't overclocked at all
+                            if (maxLvlForStrength2 >= 45 && levels >= minLvlForStrength) { //If the enchantment would be out of range for high level enchantments, only check min level
+                                enchs.put(enchant, lvl);
+                                break;
+                            } else if (maxLevel == 1 && (minLvlForStrength >= 20 || maxLvlForStrength >= 40) && levels >= minLvlForStrength) { //Fix for enchantments like AquaAffinity.
+                                enchs.put(enchant, lvl);
+                                break;
+                            }
+                        }
+
                     }
                 }
 
@@ -314,9 +323,8 @@ public class EnchantUtils {
 
     private static Enchantment pickWeighted(List<Enchantment> enchants, Map<Enchantment, Integer> levels, int weight) {
         for (int var2 = 0, var3 = enchants.size(); var2 < var3; var2++) {
-           Enchantment ench = enchants.get(var2);
-           int lvl = levels.get(ench);
-            weight -= lvl + (ench.isTreasure() && !ench.isCursed() ? 1 : 0);
+            Enchantment ench = enchants.get(var2);
+            weight -= WEIGHTS.get(ench);
             if (weight < 0)
                 return ench;
         }
