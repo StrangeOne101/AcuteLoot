@@ -190,11 +190,10 @@ public class EnchantUtils {
     public static ItemStack enchant(ItemStack stack, int levels, int bonusEnchantability, boolean treasure, boolean curses, boolean ignoreItemType) {
         if (!stack.getEnchantments().isEmpty()) return stack;
 
-        ItemStack newStack = stack.clone();
         Random random = ThreadLocalRandom.current();
 
         if (stack.getType() == Material.BOOK) {
-            newStack.setType(Material.ENCHANTED_BOOK);
+            stack.setType(Material.ENCHANTED_BOOK);
         }
 
         //The logic bellow is taken straight from vanilla
@@ -218,29 +217,29 @@ public class EnchantUtils {
             List<Enchantment> enchs = new ArrayList<>(allEnchs.keySet());
 
             Enchantment ench = pickWeighted(enchs, allEnchs, random.nextInt(totalWeight));
-            addEnchant(newStack, ench, allEnchs.get(ench));
+            addEnchant(stack, ench, allEnchs.get(ench));
             enchs.remove(ench);
             totalWeight -= WEIGHTS.get(ench);
 
             while (random.nextInt(50 - offset) <= levels && !enchs.isEmpty()) {
                 ench = pickWeighted(enchs, allEnchs, random.nextInt(totalWeight));
 
-                if ((ench == Enchantment.LOOT_BONUS_BLOCKS && newStack.getEnchantments().containsKey(Enchantment.SILK_TOUCH)) ||
-                        (ench == Enchantment.SILK_TOUCH && newStack.getEnchantments().containsKey(Enchantment.LOOT_BONUS_BLOCKS))) {
+                if ((ench == Enchantment.LOOT_BONUS_BLOCKS && stack.getEnchantments().containsKey(Enchantment.SILK_TOUCH)) ||
+                        (ench == Enchantment.SILK_TOUCH && stack.getEnchantments().containsKey(Enchantment.LOOT_BONUS_BLOCKS))) {
                     totalWeight -= WEIGHTS.get(ench);
                     enchs.remove(ench);
                     continue; //Little hotfix to prevent items getting fortune AND silk touch
                 }
 
                 totalWeight -= WEIGHTS.get(ench);
-                addEnchant(newStack, ench, allEnchs.get(ench));
+                addEnchant(stack, ench, allEnchs.get(ench));
                 enchs.remove(ench);
 
                 levels /= 2;
             }
         }
 
-        return newStack;
+        return stack;
     }
 
     public static ItemStack enchant(ItemStack stack, int levels) {
@@ -333,7 +332,9 @@ public class EnchantUtils {
 
     private static void addEnchant(ItemStack stack, Enchantment enchantment, int level) {
         if (stack.getItemMeta() instanceof EnchantmentStorageMeta) {
-            ((EnchantmentStorageMeta) stack.getItemMeta()).addStoredEnchant(enchantment, level, true);
+            EnchantmentStorageMeta meta = (EnchantmentStorageMeta) stack.getItemMeta();
+            meta.addStoredEnchant(enchantment, level, true);
+            stack.setItemMeta(meta);
         } else {
             stack.addUnsafeEnchantment(enchantment, level);
         }

@@ -21,6 +21,7 @@ import org.bukkit.event.player.*;
 import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -475,18 +476,14 @@ public class Events implements Listener {
             int enchLevel = plugin.getConfig().getInt("loot-enchants.rarities." + loot.rarity().getId() + ".level", 0);
             double enchChance = plugin.getConfig().getDouble("loot-enchants.rarities." + loot.rarity().getId() + ".chance", 0) / 100;
 
-            if (lootMaterial == LootMaterial.GENERIC) {
+            if (lootMaterial == LootMaterial.GENERIC && item.getType() != Material.BOOK && item.getType() != Material.ENCHANTED_BOOK) {
                 enchLevel /= 4;
                 enchLevel -= 1; //Just so no level 1 enchants are applied
             }
             if (enchLevel > 0 && enchChance > 0) {
                 if (enchChance >= 100 || Math.random() <= enchChance) {
                     int bonusEnchantability = plugin.getConfig().getInt("loot-enchants.rarities." + loot.rarity().getId() + ".enchantability", 0);
-                    ItemStack enchantedStack = EnchantUtils.enchant(item, enchLevel, bonusEnchantability, true, false, lootMaterial == LootMaterial.GENERIC);
-                    item.addUnsafeEnchantments(enchantedStack.getEnchantments());
-                    if (enchantedStack.getType() == Material.ENCHANTED_BOOK) {
-                        item.setType(Material.ENCHANTED_BOOK);
-                    }
+                    item = EnchantUtils.enchant(item, enchLevel, bonusEnchantability, true, false, lootMaterial == LootMaterial.GENERIC);
                 }
             }
         }
