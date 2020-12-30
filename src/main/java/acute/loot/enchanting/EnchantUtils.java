@@ -17,6 +17,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 
 public class EnchantUtils {
 
@@ -29,6 +30,7 @@ public class EnchantUtils {
     private static Method getMinLevelForLevelStrength;
     private static Method getMaxLevelForLevelStrength;
     private static Method getHandle;
+    private static AcuteLoot plugin;
 
     private static boolean overclockHack = true;
 
@@ -136,6 +138,7 @@ public class EnchantUtils {
     }
 
     public static void setup(AcuteLoot plugin) {
+        EnchantUtils.plugin = plugin;
         FileConfiguration fc = plugin.getConfig();
 
         MAX_LEVELS.put(Enchantment.ARROW_KNOCKBACK, fc.getInt("loot-enchants.enchantments.max-level.punch", Enchantment.ARROW_KNOCKBACK.getMaxLevel()));
@@ -197,7 +200,8 @@ public class EnchantUtils {
         //The logic bellow is taken straight from vanilla
 
         int enchantability = ENCHANTABILITY.containsKey(stack.getType()) ? ENCHANTABILITY.get(stack.getType()) : 1 + bonusEnchantability;
-        levels += 1 + random.nextInt(enchantability / 4 + 1) + random.nextInt(enchantability / 4 + 1);
+        int offset = 1 + random.nextInt(enchantability / 4 + 1) + random.nextInt(enchantability / 4 + 1);
+        levels += offset;
         float randomness = (random.nextFloat() + random.nextFloat() - 1.0F) * 0.15F;
         levels = Math.max(Math.min(Math.round(levels + levels * randomness), 2147483647), 1);
 
@@ -208,27 +212,27 @@ public class EnchantUtils {
 
             int totalWeight = 0;
             for (Enchantment ench : allEnchs.keySet()) {
-                totalWeight += WEIGHTS.get(ench);
+                totalWeight += allEnchs.get(ench) + (ench.isTreasure() && !ench.isCursed() ? 1 : 0);
             }
             List<Enchantment> enchs = new ArrayList<>(allEnchs.keySet());
 
             Enchantment ench = pickWeighted(enchs, allEnchs, random.nextInt(totalWeight));
-            newStack.addUnsafeEnchantment(ench, allEnchs.get(ench));
+            addEnchant(newStack, ench, allEnchs.get(ench));
             enchs.remove(ench);
-            totalWeight -= WEIGHTS.get(ench);
+            totalWeight -= allEnchs.get(ench) + (ench.isTreasure() && !ench.isCursed() ? 1 : 0);
 
-            while (random.nextInt(50) <= levels && !enchs.isEmpty()) {
+            while (random.nextInt(50 - offset) <= levels && !enchs.isEmpty()) {
                 ench = pickWeighted(enchs, allEnchs, random.nextInt(totalWeight));
 
                 if ((ench == Enchantment.LOOT_BONUS_BLOCKS && newStack.getEnchantments().containsKey(Enchantment.SILK_TOUCH)) ||
-                        ench == Enchantment.SILK_TOUCH && newStack.getEnchantments().containsKey(Enchantment.LOOT_BONUS_BLOCKS)) {
-                    totalWeight -= WEIGHTS.get(ench);
+                        (ench == Enchantment.SILK_TOUCH && newStack.getEnchantments().containsKey(Enchantment.LOOT_BONUS_BLOCKS))) {
+                    totalWeight -= allEnchs.get(ench) + (ench.isTreasure() && !ench.isCursed() ? 1 : 0);
                     enchs.remove(ench);
                     continue; //Little hotfix to prevent items getting fortune AND silk touch
                 }
 
-                totalWeight -= WEIGHTS.get(ench);
-                newStack.addUnsafeEnchantment(ench, allEnchs.get(ench));
+                totalWeight -= allEnchs.get(ench) + (ench.isTreasure() && !ench.isCursed() ? 1 : 0);
+                addEnchant(newStack, ench, allEnchs.get(ench));
                 enchs.remove(ench);
 
                 levels /= 2;
@@ -294,10 +298,10 @@ public class EnchantUtils {
                     } else if (!overclockFlag && lvl == maxLevel && overclockHack) { //If the max level isnt custom set but we should still try the hack
                         int minLvlForStrength2 = (int) getMinLevelForLevelStrength.invoke(nmsEnchant, lvl + 1);
                         int maxLvlForStrength2 = (int) getMaxLevelForLevelStrength.invoke(nmsEnchant, lvl + 1);
-                        if (maxLvlForStrength2 >= 45) {
+                        if (maxLvlForStrength2 >= 45 && levels >= minLvlForStrength) { //If the enchantment would be out of range for high level enchantments, only check min level
                             enchs.put(enchant, lvl);
                             break;
-                        }
+                        } 
                     }
                 }
 
@@ -317,5 +321,13 @@ public class EnchantUtils {
                 return ench;
         }
         return null;
+    }
+
+    private static void addEnchant(ItemStack stack, Enchantment enchantment, int level) {
+        if (stack.getItemMeta() instanceof EnchantmentStorageMeta) {
+            ((EnchantmentStorageMeta) stack.getItemMeta()).addStoredEnchant(enchantment, level, true);
+        } else {
+            stack.addUnsafeEnchantment(enchantment, level);
+        }
     }
 }

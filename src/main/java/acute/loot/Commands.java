@@ -120,7 +120,7 @@ public class Commands implements CommandExecutor, TabCompleter {
                         player.sendMessage(AcuteLoot.CHAT_PREFIX + item.getType() + " isn't valid AcuteLoot material");
                         return;
                     }
-                    new Events(plugin).createLootItem(item, AcuteLoot.random.nextDouble());
+                    new Events(plugin).createLootItem(item, AcuteLoot.random.nextDouble(), !item.getEnchantments().isEmpty());
                     player.sendMessage(AcuteLoot.CHAT_PREFIX + "AcuteLoot added with random rarity");
                 }
                 else {
@@ -130,14 +130,14 @@ public class Commands implements CommandExecutor, TabCompleter {
                             if (AcuteLoot.effectNames.containsKey(args[2])) {
                                 final EffectId effectId = new EffectId(AcuteLoot.effectNames.get(args[2]));
                                 final LootItem lootItem = new LootItem(rarity, Collections.singletonList(effectId));
-                                new Events(plugin).createLootItem(item, lootItem);
+                                new Events(plugin).createLootItem(item, lootItem, !item.getEnchantments().isEmpty());
                                 player.sendMessage(AcuteLoot.CHAT_PREFIX + "AcuteLoot added with " + args[1] + " and " + args[2]);
                                 sendIncompatibleEffectsWarning(player, lootItem, item);
                             } else {
                                 player.sendMessage(AcuteLoot.CHAT_PREFIX + "Effect " + args[2] + " doesn't exist");
                             }
                         } else {
-                            new Events(plugin).createLootItem(item, LootRarity.get(rarity));
+                            new Events(plugin).createLootItem(item, LootRarity.get(rarity), !item.getEnchantments().isEmpty());
                             player.sendMessage(AcuteLoot.CHAT_PREFIX + "AcuteLoot added with " + args[1]);
                         }
 
@@ -194,19 +194,19 @@ public class Commands implements CommandExecutor, TabCompleter {
         Player player = (Player) sender;
         ItemStack item = Events.chooseLootMaterial();
         LootItem lootItem = null;
-        if(args.length == 1) new Events(plugin).createLootItem(item, AcuteLoot.random.nextDouble());
+        if(args.length == 1) new Events(plugin).createLootItem(item, AcuteLoot.random.nextDouble(), false);
         else{
             if (AcuteLoot.rarityNames.containsKey(args[1])) {
                 final int rarityID = AcuteLoot.rarityNames.get(args[1]);
                 if(args.length == 2){
-                    new Events(plugin).createLootItem(item, LootRarity.get(rarityID));
+                    new Events(plugin).createLootItem(item, LootRarity.get(rarityID), false);
                 }
                 final List<EffectId> effects = new ArrayList<>();
                 if (args.length > 2) {
                     if (AcuteLoot.effectNames.containsKey(args[2])){
                         effects.add(new EffectId(AcuteLoot.effectNames.get(args[2])));
                         lootItem = new LootItem(rarityID, effects);
-                        new Events(plugin).createLootItem(item, lootItem);
+                        new Events(plugin).createLootItem(item, lootItem, false);
                     }
                     else {
                         player.sendMessage(AcuteLoot.CHAT_PREFIX + "Effect " + args[2] + " doesn't exist");

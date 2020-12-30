@@ -108,7 +108,7 @@ public class Events implements Listener {
                 player.sendMessage("Roll: " + roll);
                 player.sendMessage("Raw chance: " + chance);
             }
-            if (!plugin.getConfig().getBoolean("use-permissions") || (plugin.getConfig().getBoolean("use-permissions") && player.hasPermission("acuteloot.enchant"))) {
+            if (!plugin.getConfig().getBoolean("use-permissions") || player.hasPermission("acuteloot.enchant")) {
                 if (roll <= chance) {
                     Map<Enchantment, Integer> enchantments = event.getEnchantsToAdd();
                     int enchantRarity = getEnchantRarity(enchantments);
@@ -116,7 +116,7 @@ public class Events implements Listener {
                     if (getLootCode(plugin, item) == null) {
                         double seed = AcuteLoot.random.nextDouble();
                         chance = (seed + (enchantRarity / 300.0)) / 2.0;
-                        item = createLootItem(item, chance);
+                        item = createLootItem(item, chance, true);
                         if (AcuteLoot.debug) {
                             player.sendMessage(ChatColor.GOLD + "You enchanted a " + ChatColor.AQUA + item.getType().toString());
                             player.sendMessage(ChatColor.GOLD + "It is called " + item.getItemMeta().getDisplayName());
@@ -420,35 +420,35 @@ public class Events implements Listener {
     // Create Loot Item with RANDOM material
     public ItemStack createLootItem() {
         ItemStack item = chooseLootMaterial();
-        return createLootItem(item, AcuteLoot.random.nextDouble());
+        return createLootItem(item, AcuteLoot.random.nextDouble(), false);
     }
 
 
     // Create Loot Item with GIVEN material
-    public ItemStack createLootItem(ItemStack item, double rarity) {
+    public ItemStack createLootItem(ItemStack item, double rarity, boolean preEnchanted) {
         // Generate loot: name, rarity and effects
         LootItemGenerator generator = new LootItemGenerator(AcuteLoot.rarityChancePool, AcuteLoot.effectChancePool);
         final LootMaterial lootMaterial = LootMaterial.lootMaterialForMaterial(item.getType());
         if (lootMaterial.equals(LootMaterial.UNKNOWN)) {
             return item;
         }
-        return createLootItem(item, generator.generate(rarity, lootMaterial));
+        return createLootItem(item, generator.generate(rarity, lootMaterial), preEnchanted);
     }
 
     //public ItemStack createLootItem(ItemStack item, int rarityID, List<Integer> effects) {
     //    return createLootItem(item, new LootItem(rarityID, effects));
     //}
 
-    public ItemStack createLootItem(ItemStack item, LootRarity rarity) {
+    public ItemStack createLootItem(ItemStack item, LootRarity rarity, boolean preEnchanted) {
         LootItemGenerator generator = new LootItemGenerator(AcuteLoot.rarityChancePool, AcuteLoot.effectChancePool);
         final LootMaterial lootMaterial = LootMaterial.lootMaterialForMaterial(item.getType());
         if (lootMaterial.equals(LootMaterial.UNKNOWN)) {
             return item;
         }
-        return createLootItem(item, generator.generateWithRarity(rarity, lootMaterial));
+        return createLootItem(item, generator.generateWithRarity(rarity, lootMaterial), preEnchanted);
     }
 
-    public ItemStack createLootItem(ItemStack item, final LootItem loot) {
+    public ItemStack createLootItem(ItemStack item, final LootItem loot, boolean preEnchanted) {
         final LootMaterial lootMaterial = LootMaterial.lootMaterialForMaterial(item.getType());
         if (lootMaterial.equals(LootMaterial.UNKNOWN)) {
             return item;
@@ -471,20 +471,22 @@ public class Events implements Listener {
             plugin.getLogger().severe("Name Generator: " + nameGenerator.toString());
         }
 
-        int enchLevel = plugin.getConfig().getInt("loot-enchants.rarities." + loot.rarity().getId() + ".level", 0);
-        double enchChance = plugin.getConfig().getDouble("loot-enchants.rarities." + loot.rarity().getId() + ".chance", 0) / 100;
+        if (!preEnchanted) {
+            int enchLevel = plugin.getConfig().getInt("loot-enchants.rarities." + loot.rarity().getId() + ".level", 0);
+            double enchChance = plugin.getConfig().getDouble("loot-enchants.rarities." + loot.rarity().getId() + ".chance", 0) / 100;
 
-        if (lootMaterial == LootMaterial.GENERIC) {
-            enchLevel /= 4;
-            enchLevel -= 1; //Just so no level 1 enchants are applied
-        }
-        if (enchLevel > 0 && enchChance > 0) {
-            if (enchChance >= 100 || Math.random() <= enchChance) {
-                int bonusEnchantability = plugin.getConfig().getInt("loot-enchants.rarities." + loot.rarity().getId() + ".enchantability", 0);
-                ItemStack enchantedStack = EnchantUtils.enchant(item, enchLevel, bonusEnchantability, true, false, lootMaterial == LootMaterial.GENERIC);
-                item.addUnsafeEnchantments(enchantedStack.getEnchantments());
-                if (enchantedStack.getType() == Material.ENCHANTED_BOOK) {
-                    item.setType(Material.ENCHANTED_BOOK);
+            if (lootMaterial == LootMaterial.GENERIC) {
+                enchLevel /= 4;
+                enchLevel -= 1; //Just so no level 1 enchants are applied
+            }
+            if (enchLevel > 0 && enchChance > 0) {
+                if (enchChance >= 100 || Math.random() <= enchChance) {
+                    int bonusEnchantability = plugin.getConfig().getInt("loot-enchants.rarities." + loot.rarity().getId() + ".enchantability", 0);
+                    ItemStack enchantedStack = EnchantUtils.enchant(item, enchLevel, bonusEnchantability, true, false, lootMaterial == LootMaterial.GENERIC);
+                    item.addUnsafeEnchantments(enchantedStack.getEnchantments());
+                    if (enchantedStack.getType() == Material.ENCHANTED_BOOK) {
+                        item.setType(Material.ENCHANTED_BOOK);
+                    }
                 }
             }
         }
